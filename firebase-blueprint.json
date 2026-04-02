@@ -1,0 +1,96 @@
+{
+  "entities": {
+    "Correction": {
+      "title": "Correction",
+      "description": "A manual correction made by a user to improve OCR accuracy.",
+      "type": "object",
+      "properties": {
+        "fileName": { "type": "string" },
+        "field": { "type": "string" },
+        "originalValue": { "type": "string" },
+        "correctedValue": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" }
+      },
+      "required": ["fileName", "field", "correctedValue", "timestamp", "userId"]
+    },
+    "ProcessingSession": {
+      "title": "ProcessingSession",
+      "description": "A session tracking the extraction and correction of one or more files.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["started", "processing", "correcting", "completed"] },
+        "fileCount": { "type": "integer" },
+        "completedCount": { "type": "integer" }
+      },
+      "required": ["userId", "startTime", "status"]
+    },
+    "SessionEvent": {
+      "title": "SessionEvent",
+      "description": "An event within a processing session.",
+      "type": "object",
+      "properties": {
+        "sessionId": { "type": "string" },
+        "type": { "type": "string", "enum": ["file_selected", "extraction_started", "extraction_completed", "correction_made", "session_completed"] },
+        "fileName": { "type": "string" },
+        "details": { "type": "object" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["sessionId", "type", "timestamp"]
+    },
+    "Template": {
+      "title": "Template",
+      "description": "A layout template for field coordinates and zoom level.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "coords": { "type": "object" },
+        "zoom": { "type": "number" },
+        "fontSize": { "type": "number" },
+        "initialScrollTop": { "type": "number" },
+        "initialScrollLeft": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "coords", "zoom"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile and access status.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "status": { "type": "string", "enum": ["approved", "pending", "rejected"] },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "role", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and access control."
+    },
+    "/corrections/{correctionId}": {
+      "schema": "Correction",
+      "description": "Collection of manual corrections for learning."
+    },
+    "/sessions/{sessionId}": {
+      "schema": "ProcessingSession",
+      "description": "Active processing sessions."
+    },
+    "/sessions/{sessionId}/events/{eventId}": {
+      "schema": "SessionEvent",
+      "description": "Events within a specific session."
+    },
+    "/templates/{templateId}": {
+      "schema": "Template",
+      "description": "User-defined layout templates."
+    }
+  }
+}

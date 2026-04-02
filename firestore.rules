@@ -1,0 +1,58 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidCorrection(data) {
+      return data.keys().hasAll(['fileName', 'field', 'correctedValue', 'timestamp', 'userId']) &&
+             data.fileName is string &&
+             data.field is string &&
+             data.correctedValue is string &&
+             data.timestamp is string &&
+             data.userId == request.auth.uid;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        ((request.auth.token.email == "noar48@gmail.com" && request.auth.token.email_verified == true) ||
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+    }
+
+    function isApproved() {
+      return isAuthenticated() &&
+        (isAdmin() || (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved'));
+    }
+
+    match /corrections/{correctionId} {
+      allow create: if isApproved() && isValidCorrection(request.resource.data);
+      allow read, delete: if isApproved() && (request.auth.uid == resource.data.userId || isAdmin());
+    }
+    
+    match /sessions/{sessionId} {
+      allow create: if isApproved() && request.resource.data.userId == request.auth.uid;
+      allow read, update, delete: if isApproved() && (resource.data.userId == request.auth.uid || isAdmin());
+      
+      match /events/{eventId} {
+        allow create: if isApproved();
+        allow read, delete: if isApproved();
+      }
+    }
+    
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId);
+      allow update: if isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role && request.resource.data.status == resource.data.status);
+    }
+
+    match /templates/{templateId} {
+      allow read, write: if isApproved() && (request.resource.data.userId == request.auth.uid || resource.data.userId == request.auth.uid || isAdmin());
+    }
+  }
+}
